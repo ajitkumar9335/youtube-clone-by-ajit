@@ -21,7 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<Home />} />
-          <Route path="watch/:id" element={<VideoPlayer />} />
+          <Route path="/:slug" element={<VideoPlayer />} />
           <Route path="auth" element={<Auth />} />
           <Route path="channel/:id" element={<ChannelPage />} />
           {/* <Route path="/login" element={<Login />} /> */}

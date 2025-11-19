@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import api from "../api/axiosConfig";
 
 export default function VideoPlayer() {
-  const { id } = useParams();
+  const { slug } = useParams(); // ⭐ using slug instead of ID
 
   const [video, setVideo] = useState(null);
   const [recommended, setRecommended] = useState([]);
@@ -16,23 +16,23 @@ export default function VideoPlayer() {
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState("");
 
-  // FETCH VIDEO + RECOMMENDED
+  // FETCH VIDEO BY SLUG + RECOMMENDED
   useEffect(() => {
-    api.get(`/videos/${id}`).then((res) => {
+    api.get(`/slug/${slug}`).then((res) => {
       setVideo(res.data);
       setLikes(res.data.likes?.length || 0);
       setDislikes(res.data.dislikes?.length || 0);
     });
 
-    api.get(`/videos`).then((res) => setRecommended(res.data));
-  }, [id]);
+    api.get(`/`).then((res) => setRecommended(res.data));
+  }, [slug]);
 
   if (!video) return <div className="p-10 text-center">Loading...</div>;
 
-  // LIKE
+  // LIKE VIDEO
   const handleLike = async () => {
     try {
-      const res = await api.post(`/videos/like/${video._id}`);
+      const res = await api.post(`/like/${video._id}`);
       setLikes(res.data.likes.length);
       setDislikes(res.data.dislikes.length);
     } catch (err) {
@@ -40,10 +40,10 @@ export default function VideoPlayer() {
     }
   };
 
-  // DISLIKE
+  // DISLIKE VIDEO
   const handleDislike = async () => {
     try {
-      const res = await api.post(`/videos/dislike/${video._id}`);
+      const res = await api.post(`/dislike/${video._id}`);
       setLikes(res.data.likes.length);
       setDislikes(res.data.dislikes.length);
     } catch (err) {
@@ -56,9 +56,9 @@ export default function VideoPlayer() {
     if (!newComment.trim()) return;
 
     try {
-      const res = await api.post(`/videos/${id}/comments`, {
+      const res = await api.post(`/${video._id}/comments`, {
         text: newComment,
-        userId: "user01",
+        username: "User",
       });
 
       setVideo((prev) => ({
@@ -78,17 +78,15 @@ export default function VideoPlayer() {
     setEditText(comment.text);
   };
 
-  // SAVE EDITED COMMENT
-  const handleSave = async (commentId) => {
+  // SAVE EDIT COMMENT
+  const handleSave = async (cid) => {
     try {
-      await api.put(`/videos/${id}/comments/${commentId}`, {
-        text: editText,
-      });
+      await api.put(`/${video._id}/comments/${cid}`, { text: editText });
 
       setVideo((prev) => ({
         ...prev,
         comments: prev.comments.map((c) =>
-          c._id === commentId ? { ...c, text: editText } : c
+          c._id === cid ? { ...c, text: editText } : c
         ),
       }));
 
@@ -100,13 +98,13 @@ export default function VideoPlayer() {
   };
 
   // DELETE COMMENT
-  const handleDelete = async (commentId) => {
+  const handleDelete = async (cid) => {
     try {
-      await api.delete(`/videos/${id}/comments/${commentId}`);
+      await api.delete(`/${video._id}/comments/${cid}`);
 
       setVideo((prev) => ({
         ...prev,
-        comments: prev.comments.filter((c) => c._id !== commentId),
+        comments: prev.comments.filter((c) => c._id !== cid),
       }));
     } catch (err) {
       console.error("DELETE COMMENT ERROR:", err);
@@ -141,6 +139,7 @@ export default function VideoPlayer() {
             <img
               src={"/default-channel.png"}
               className="w-12 h-12 rounded-full"
+              alt=""
             />
 
             <div>
@@ -154,9 +153,8 @@ export default function VideoPlayer() {
           </button>
         </div>
 
-        {/* LIKE / DISLIKE */}
-        <div className="flex items-center gap-4">
-
+        {/* LIKE & DISLIKE */}
+        <div className="flex items-center gap-4 mt-4">
           <button
             onClick={handleLike}
             className="flex items-center gap-2 bg-gray-100 px-5 py-2 rounded-full border"
@@ -178,10 +176,6 @@ export default function VideoPlayer() {
           <button className="bg-gray-100 px-5 py-2 rounded-full border flex items-center gap-2">
             ⬇️ Download
           </button>
-
-          <button className="bg-gray-100 px-5 py-2 rounded-full border flex items-center gap-2">
-            💾 Save
-          </button>
         </div>
 
         {/* VIEWS + DATE */}
@@ -194,7 +188,7 @@ export default function VideoPlayer() {
           {video.description}
         </div>
 
-        {/* COMMENTS SECTION */}
+        {/* COMMENTS */}
         <div className="mt-10">
           <h2 className="text-xl font-semibold mb-4">
             {video.comments?.length || 0} Comments
@@ -268,7 +262,6 @@ export default function VideoPlayer() {
                   <button onClick={() => handleDelete(comment._id)}>Delete</button>
                 </div>
 
-                {/* SAVE BUTTON */}
                 {editId === comment._id && (
                   <button
                     onClick={() => handleSave(comment._id)}
@@ -281,16 +274,15 @@ export default function VideoPlayer() {
             </div>
           ))}
         </div>
-
       </div>
 
-      {/* RIGHT SIDE (recommended videos) */}
+      {/* RIGHT SIDE — Recommended */}
       <div className="w-[350px] max-h-[80vh] overflow-y-auto">
         {recommended
-          .filter((v) => v._id !== id)
+          .filter((v) => v.slug !== slug)
           .map((v) => (
             <Link
-              to={`/watch/${v._id}`}
+              to={`/${v.slug}`}
               key={v._id}
               className="flex gap-3 mb-5 hover:bg-gray-100 p-2 rounded-xl"
             >
